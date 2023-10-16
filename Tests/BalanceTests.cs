@@ -6,35 +6,44 @@ namespace Tests
 {
     public class BalanceTests
     {
+        private MongoDbServiceUnitTestMock _mongoDbServiceUnitTestMock;
+
+        public BalanceTests()
+        {
+            _mongoDbServiceUnitTestMock = new MongoDbServiceUnitTestMock();
+            _mongoDbServiceUnitTestMock.Initialize();
+        }
+
         [Fact]
         public async Task CheckTransferFromOneAccountToAnotherTest()
         {
+            var balances = _mongoDbServiceUnitTestMock.GetItems();
+            var recipient = balances.First();
+            var donor = balances.Last();
+            var moneyToTransfer = 10;
+
             var service = new ServiceHost();
             var client = service.CreateClient();
 
-            Assert.Equal(0, await Balance(client, 1));
+            Assert.Equal(recipient.Amount, await GetBalanceAsync(client, recipient.Account));
+            Assert.Equal(donor.Amount, await GetBalanceAsync(client, donor.Account));
 
-            await client.PostAsync("1/10", null);
-            await client.PostAsync("2/30", null);
+            await client.DeleteAsync($"{donor.Account}/{moneyToTransfer}");
+            Assert.Equal(donor.Amount - moneyToTransfer, await GetBalanceAsync(client, donor.Account));
 
-            Assert.Equal(10, await Balance(client, 1));
-            Assert.Equal(30, await Balance(client, 2));
-
-            await client.DeleteAsync("2/5");
-            await client.PostAsync("1/5", null);
-
-            Assert.Equal(15, await Balance(client, 1));
-            Assert.Equal(25, await Balance(client, 2));
+            await client.PostAsync($"{recipient.Account}/{moneyToTransfer}", null);
+            Assert.Equal(recipient.Amount + moneyToTransfer, await GetBalanceAsync(client, recipient.Account));
         }
 
-
-        private async Task<decimal?> Balance(HttpClient client, int account)
+        private async Task<decimal?> GetBalanceAsync(HttpClient client, int account)
         {
             var response = await client.GetAsync(account.ToString());
             var content = await response.Content.ReadAsStringAsync();
 
             if (decimal.TryParse(content, out var value))
+            {
                 return value;
+            }
 
             return null;
         }
