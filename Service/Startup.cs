@@ -13,7 +13,7 @@ public class Startup
         services.AddScoped(sp =>
         {
             var options = sp.GetRequiredService<IConfiguration>();
-            var settings = MongoClientSettings.FromConnectionString(options["Connection"]);
+            var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
 
             return new MongoClient(settings);
         });

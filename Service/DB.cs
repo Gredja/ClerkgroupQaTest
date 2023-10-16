@@ -25,7 +25,6 @@ namespace Service
             .GetDatabase("Accounts")
             .GetCollection<Balance>("Balance");
 
-
         /// <summary>
         /// Получение остатка на счёте.
         /// </summary>
@@ -41,9 +40,14 @@ namespace Service
         /// <param name="account">Номер счета</param>
         /// <param name="amount">Сумма пополнения</param>
         /// <returns></returns>
-        public Task DepositToAccount(int account, decimal amount) => Accounts
-            .FindOneAndUpdateAsync(x => x.Account == account,
-                Builders<Balance>.Update.Inc(x => x.Amount, amount));
+        public Task DepositToAccount(int account, decimal deposit)
+        {
+            var filter = Builders<Balance>.Filter.Eq(x => x.Account, account);
+            var amount = Accounts.Find(x => x.Account == account).Single().Amount;
+            var update = Builders<Balance>.Update.Set(x => x.Amount, amount + deposit);
+
+            return Accounts.UpdateOneAsync(filter, update);
+        }
 
         /// <summary>
         /// Уменьшение остатка на счёте на заданную сумму.
@@ -51,8 +55,13 @@ namespace Service
         /// <param name="account">Номер счета</param>
         /// <param name="amount">Сумма снятия</param>
         /// <returns></returns>
-        public Task WithdrawFromAccount(int account, decimal amount) => Accounts
-            .FindOneAndUpdateAsync(x => x.Account == account,
-                Builders<Balance>.Update.Inc(x => x.Amount, -amount));
-    }
+        public Task WithdrawFromAccount(int account, decimal withdraw)
+        {
+            var filter = Builders<Balance>.Filter.Eq(x => x.Account, account);
+            var amount = Accounts.Find(x => x.Account == account).Single().Amount;
+            var update = Builders<Balance>.Update.Set(x => x.Amount, amount - withdraw);
+
+            return Accounts.UpdateOneAsync(filter, update);
+        }
+ }
 }
